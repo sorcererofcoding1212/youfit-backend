@@ -29,7 +29,7 @@ export const setAuthCookie = (res: Response, cookieValue: string) => {
   return res.cookie("jwt_key", cookieValue, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "none",
   });
 };
 
