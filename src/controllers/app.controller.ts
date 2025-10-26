@@ -294,11 +294,7 @@ export const editSet = async (req: Request, res: Response) => {
   try {
     const { workoutId, setId, reps, weight } = req.body;
 
-    console.log("WORKOUT ID RECEIVED:", workoutId);
-    console.log("SET ID RECEIVED:", setId);
-
     const workout = await Workout.findById(workoutId);
-    console.log("WORKOUT FOUND:", workout);
 
     if (!workout) {
       res.json({
@@ -307,8 +303,6 @@ export const editSet = async (req: Request, res: Response) => {
       });
       return;
     }
-
-    console.log("WORKOUT FOUND:", workout);
 
     const set = workout.sets.id(setId);
 
@@ -319,8 +313,6 @@ export const editSet = async (req: Request, res: Response) => {
       });
       return;
     }
-
-    console.log("SET FOUND:", set);
 
     set.reps = reps;
     set.weight = weight;
