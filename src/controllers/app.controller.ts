@@ -324,7 +324,7 @@ export const editSet = async (req: Request, res: Response) => {
       success: true,
     });
   } catch (error) {
-    console.log("EDIT_SET_ERROR", error);
+    console.log("SET_EDIT_ERROR", error);
     res.json({
       msg: "Internal server error",
       success: false,
