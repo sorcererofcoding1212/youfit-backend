@@ -746,6 +746,33 @@ export const getUserRoutines = async (req: Request, res: Response) => {
 
     const routines = await Routine.find({
       userId,
+    }).then(async (routines) => {
+      const routineData = await Promise.all(
+        routines.map(async (routine) => {
+          const exercises = await Promise.all(
+            routine.exercises.map(async (ex) => {
+              const exerciseId = ex.exerciseId;
+              const exerciseDetails = await Exercise.findById(exerciseId);
+              const sets = ex.sets;
+              const order = ex.order;
+              return {
+                exerciseName: exerciseDetails?.name,
+                sets,
+                order,
+                exerciseId,
+              };
+            })
+          );
+          return {
+            name: routine.name,
+            _id: routine._id,
+            description: routine.description,
+            exercises: exercises,
+            createdAt: routine.createdAt,
+          };
+        })
+      );
+      return routineData;
     });
 
     res.json({

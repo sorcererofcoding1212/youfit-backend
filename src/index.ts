@@ -10,12 +10,12 @@ configDotenv();
 
 const app = express();
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://192.168.29.179:5173"
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://192.168.29.178:5173"
 
 app.use(express.json());
 app.use(
   cors({
-    origin: [FRONTEND_URL, "http://192.168.29.179:5173"],
+    origin: [FRONTEND_URL, "http://192.168.29.178:5173"],
     credentials: true,
   })
 );
