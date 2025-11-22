@@ -2,6 +2,8 @@ import { InferSchemaType, model, Schema, Types } from "mongoose";
 import { IExercise } from "./exercise.model";
 import { ICategory } from "./category.model";
 
+// session => workouts => exericises => sets
+
 const WorkoutSchema = new Schema({
   sessionId: {
     type: Types.ObjectId,

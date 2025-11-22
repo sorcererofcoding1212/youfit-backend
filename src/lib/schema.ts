@@ -21,7 +21,6 @@ export const createExerciseSchema = z.object({
     .enum(["strength", "cardio", "flexibility", "other"])
     .default("strength"),
   exerciseType: z.enum(["isolation", "compound"]),
-  isCustom: z.boolean().optional(),
   muscleGroupName: z.string(),
 });
 
@@ -36,3 +35,17 @@ export const createWorkoutSchema = z.object({
 });
 
 export type CreateWorkoutSchema = z.infer<typeof createWorkoutSchema>;
+
+export const createRoutineSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  exercises: z
+    .array(
+      z.object({
+        exerciseId: z.string(),
+        order: z.number(),
+        sets: z.number(),
+      })
+    )
+    .min(1),
+});

@@ -1,6 +1,6 @@
 import { Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import { IWorkout, PopulatedWorkout } from "../models/workout.model";
+import { IWorkout, PopulatedWorkout, Workout } from "../models/workout.model";
 
 interface VolumeProps {
   [createdAt: string]: number;
@@ -16,6 +16,12 @@ interface SetLoadProps {
   load: number;
 }
 
+interface Set {
+  reps: number;
+  weight: number;
+  createdAt?: Date;
+}
+
 export const generateToken = (phoneNumber: string, userId: string) => {
   const token = jwt.sign(
     { phoneNumber, id: userId },
@@ -26,11 +32,7 @@ export const generateToken = (phoneNumber: string, userId: string) => {
 };
 
 export const setAuthCookie = (res: Response, cookieValue: string) => {
-  return res.cookie("jwt_key", cookieValue, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "none",
-  });
+  return res.cookie("jwt_key", cookieValue);
 };
 
 export const decodeToken = (token: string) => {
@@ -143,4 +145,37 @@ export const setDuration = (duration: string) => {
   }
 
   return startDate;
+};
+
+export const getRecordSet = async (userId: string, exerciseId: string) => {
+  const response = await Workout.find({
+    userId,
+    exerciseId,
+  }).populate("exerciseId", "name");
+
+  const calculateHighestSet = (sets: Set[]) => {
+    const setArray = sets.map((s) => s.reps * s.weight);
+    const highestSetData = Math.max(...setArray);
+    const highestSet = sets.find((s) => s.reps * s.weight === highestSetData);
+
+    if (!highestSet) {
+      return sets[0];
+    }
+    return highestSet;
+  };
+
+  const setData = response.map((s) => {
+    const sets = s.sets as Set[];
+    const highestSet = calculateHighestSet(sets);
+    const createdAt = new Date(s.createdAt);
+    return {
+      reps: highestSet.reps,
+      weight: highestSet.weight,
+      createdAt,
+    };
+  });
+
+  const highestSet = calculateHighestSet(setData);
+
+  return highestSet;
 };

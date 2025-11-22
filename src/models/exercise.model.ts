@@ -24,12 +24,6 @@ const ExerciseSchema = new Schema(
       enum: ["isolation", "compound"],
       required: true,
     },
-
-    userId: {
-      type: Types.ObjectId,
-      ref: "User",
-      required: false,
-    },
   },
   {
     timestamps: true,
