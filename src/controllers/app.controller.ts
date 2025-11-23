@@ -788,3 +788,30 @@ export const getUserRoutines = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const deleteRoutine = async (req: Request, res: Response) => {
+  try {
+    const routineId = req.params.routineId;
+    if (!routineId) {
+      res.json({
+        msg: "Invalid request",
+        success: false,
+      });
+    }
+
+    await Routine.deleteOne({
+      _id: routineId,
+    });
+
+    res.json({
+      msg: "Routine deleted",
+      success: true,
+    });
+  } catch (error) {
+    console.log("DELETE_ROUTINE_ERROR");
+    res.json({
+      msg: "Internal server error",
+      success: false,
+    });
+  }
+};

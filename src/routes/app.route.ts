@@ -6,6 +6,7 @@ import {
   createSession,
   createWorkout,
   createWorkoutFromRoutine,
+  deleteRoutine,
   deleteSet,
   editSet,
   getCategories,
@@ -39,5 +40,6 @@ route.get("/record/:exerciseId", validateSession, getExerciseRecordSet);
 route.post("/routine", validateSession, createRoutine);
 route.post("/routine/:routineId/:sessionId", validateSession, createWorkoutFromRoutine);
 route.get("/routines", validateSession, getUserRoutines);
+route.delete("/routine/:routineId", validateSession, deleteRoutine);
 
 export default route;
