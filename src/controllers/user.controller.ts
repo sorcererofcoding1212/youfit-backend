@@ -7,6 +7,7 @@ import { clearCookie, generateToken, setAuthCookie } from "../lib/utils";
 export const registerUser = async (req: Request, res: Response) => {
   try {
     const { phoneNumber, fullName, password } = req.body;
+    
     const { success, error } = registerSchema.safeParse({
       phoneNumber,
       fullName,
@@ -63,6 +64,7 @@ export const registerUser = async (req: Request, res: Response) => {
 export const loginUser = async (req: Request, res: Response) => {
   try {
     const { phoneNumber, password } = req.body;
+
     const { success, error } = loginSchema.safeParse({
       phoneNumber,
       password,

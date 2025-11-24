@@ -2,13 +2,19 @@ import { Request, Response } from "express";
 import { Exercise } from "../models/exercise.model";
 import { Session } from "../models/session.model";
 import { Category } from "../models/category.model";
-import { createExerciseSchema, createWorkoutSchema } from "../lib/schema";
+import {
+  createExerciseSchema,
+  createRoutineSchema,
+  createWorkoutSchema,
+} from "../lib/schema";
 import { PopulatedWorkout, Workout } from "../models/workout.model";
 import {
   calculateProgressiveOverload,
   calculateWorkoutDistribution,
+  getRecordSet,
   sortVolumeData,
 } from "../lib/utils";
+import { Routine } from "../models/routine.model";
 
 export const createSession = async (req: Request, res: Response) => {
   try {
@@ -126,8 +132,7 @@ export const getCategories = async (req: Request, res: Response) => {
 
 export const createExercise = async (req: Request, res: Response) => {
   try {
-    const { muscleGroupName, name, category, exerciseType, isCustom } =
-      req.body;
+    const { muscleGroupName, name, category, exerciseType } = req.body;
 
     const userId = req.userId;
 
@@ -144,7 +149,6 @@ export const createExercise = async (req: Request, res: Response) => {
       name,
       category,
       exerciseType,
-      isCustom,
     });
 
     if (!success) {
@@ -171,7 +175,6 @@ export const createExercise = async (req: Request, res: Response) => {
       name,
       category,
       exerciseType,
-      userId: isCustom ? userId : null,
       muscleGroup: muscleGroup._id,
     });
 
@@ -248,7 +251,19 @@ export const createWorkout = async (req: Request, res: Response) => {
       return;
     }
 
+    const recordSet = await getRecordSet(userId, exerciseId);
+
     const set = { reps, weight };
+
+    let isRecordSet = false;
+
+    if (!recordSet) {
+      isRecordSet = true;
+    } else {
+      if (set.reps * set.weight > recordSet.reps * recordSet.weight) {
+        isRecordSet = true;
+      }
+    }
 
     const workout = await Workout.findOne({
       exerciseId,
@@ -280,6 +295,7 @@ export const createWorkout = async (req: Request, res: Response) => {
       msg: "Set added",
       success: true,
       data: workout,
+      isRecordSet,
     });
   } catch (error) {
     console.log("CREATE_WORKOUT_ERROR", error);
@@ -304,7 +320,7 @@ export const editSet = async (req: Request, res: Response) => {
       return;
     }
 
-    const set = workout.sets.id(setId);
+    const set = workout.sets.find((s) => s._id.toString() === setId);
 
     if (!set) {
       res.json({
@@ -551,6 +567,248 @@ export const getWorkoutDistribution = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.log("WORKOUT_DISTRIBUTION_ERROR", error);
+    res.json({
+      msg: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+export const getExerciseRecordSet = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    const exerciseId = req.params.exerciseId;
+
+    const recordSet = await getRecordSet(userId, exerciseId);
+
+    if (!recordSet) {
+      res.json({
+        msg: "No data exists",
+        success: false,
+      });
+
+      return;
+    }
+
+    res.json({
+      msg: "Record set fetched",
+      success: true,
+      set: recordSet,
+    });
+  } catch (error) {
+    console.log("RECORD_SET_ERROR", error);
+    res.json({
+      msg: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+export const createRoutine = async (req: Request, res: Response) => {
+  try {
+    const { name, description, exercises } = req.body;
+    const userId = req.userId;
+
+    if (!userId) {
+      res.json({
+        msg: "Invalid request",
+        success: false,
+      });
+      return;
+    }
+
+    const { success } = createRoutineSchema.safeParse({
+      name,
+      description,
+      exercises,
+    });
+
+    if (!success) {
+      res.json({
+        msg: "Invalid routine",
+        success: false,
+      });
+      return;
+    }
+
+    const existingRoutine = await Routine.findOne({
+      name,
+      userId,
+    });
+
+    if (existingRoutine) {
+      res.json({
+        msg: "Please choose a unique name",
+        success: false,
+      });
+      return;
+    }
+
+    await Routine.create({
+      name,
+      userId,
+      exercises,
+      description,
+    });
+
+    res.json({
+      msg: "Routine added",
+      success: true,
+    });
+  } catch (error) {
+    console.log("CREATE_ROUTINE_ERROR", error);
+    res.json({
+      msg: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+export const createWorkoutFromRoutine = async (req: Request, res: Response) => {
+  try {
+    const routineId = req.params.routineId;
+    const sessionId = req.params.sessionId;
+    const userId = req.userId;
+
+    const routine = await Routine.findOne({
+      _id: routineId,
+    });
+
+    if (!routine) {
+      res.json({
+        msg: "Routine not found",
+        success: false,
+      });
+      return;
+    }
+
+    if (!userId) {
+      res.json({
+        msg: "Invalid request",
+        success: false,
+      });
+      return;
+    }
+
+    const routineData = routine.exercises.map((ex) => ({
+      exerciseId: ex.exerciseId,
+      sets: ex.sets,
+      order: ex.order,
+    }));
+
+    if (!sessionId) {
+      res.json({
+        msg: "Invalid request",
+        success: false,
+      });
+      return;
+    }
+
+    await Promise.all(
+      routineData.map(async (r) => {
+        const setArray = Array.from({ length: r.sets }).map(() => ({
+          reps: 0,
+          weight: 0,
+        }));
+        const workout = await Workout.create({
+          userId,
+          exerciseId: r.exerciseId,
+          sessionId,
+          sets: setArray,
+          createdAt: Date.now(),
+        });
+        return workout;
+      })
+    );
+
+    res.json({
+      msg: "Workout created",
+      success: true,
+    });
+  } catch (error) {
+    console.log("WORKOUT_ROUTINE_ERROR", error);
+    res.json({
+      msg: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+export const getUserRoutines = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      res.json({
+        msg: "Invalid request",
+        success: false,
+      });
+    }
+
+    const routines = await Routine.find({
+      userId,
+    }).then(async (routines) => {
+      const routineData = await Promise.all(
+        routines.map(async (routine) => {
+          const exercises = await Promise.all(
+            routine.exercises.map(async (ex) => {
+              const exerciseId = ex.exerciseId;
+              const exerciseDetails = await Exercise.findById(exerciseId);
+              const sets = ex.sets;
+              const order = ex.order;
+              return {
+                exerciseName: exerciseDetails?.name,
+                sets,
+                order,
+                exerciseId,
+              };
+            })
+          );
+          return {
+            name: routine.name,
+            _id: routine._id,
+            description: routine.description,
+            exercises: exercises,
+            createdAt: routine.createdAt,
+          };
+        })
+      );
+      return routineData;
+    });
+
+    res.json({
+      msg: "Routines fetched",
+      success: true,
+      routines,
+    });
+  } catch (error) {
+    console.log("GET_ROUTINES_ERROR", error);
+    res.json({
+      msg: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+export const deleteRoutine = async (req: Request, res: Response) => {
+  try {
+    const routineId = req.params.routineId;
+    if (!routineId) {
+      res.json({
+        msg: "Invalid request",
+        success: false,
+      });
+    }
+
+    await Routine.deleteOne({
+      _id: routineId,
+    });
+
+    res.json({
+      msg: "Routine deleted",
+      success: true,
+    });
+  } catch (error) {
+    console.log("DELETE_ROUTINE_ERROR");
     res.json({
       msg: "Internal server error",
       success: false,
