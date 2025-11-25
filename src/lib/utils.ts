@@ -53,85 +53,112 @@ export const clearCookie = (res: Response, cookieName: string) => {
 };
 
 export const sortVolumeData = (volumeData: IWorkout[], duration: string) => {
-  const startDate = setDuration(duration);
-  const sortedVolumeData: VolumeProps = {};
+  try {
+    const startDate = setDuration(duration);
+    const sortedVolumeData: VolumeProps = {};
 
-  for (const vol of volumeData) {
-    const createdAt = new Date(vol.createdAt);
-    if (createdAt < startDate) continue;
+    for (const vol of volumeData) {
+      const createdAt = new Date(vol.createdAt);
+      if (createdAt < startDate) continue;
 
-    const volDate = createdAt.toLocaleDateString("en-CA");
+      const volDate = createdAt.toLocaleDateString("en-CA");
 
-    sortedVolumeData[volDate] =
-      (sortedVolumeData[volDate] || 0) + vol.sets.length;
+      const filteredSets = vol.sets.filter((s) => s.reps && s.reps > 0);
+
+      if (filteredSets.length < 1) continue;
+
+      sortedVolumeData[volDate] =
+        (sortedVolumeData[volDate] || 0) + filteredSets.length;
+    }
+
+    return Object.entries(sortedVolumeData)
+      .map(([date, volume]) => ({ date, volume }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  } catch (error) {
+    console.log("VOLUME_FUNCTION_ERROR", error);
+    return [];
   }
-
-  return Object.entries(sortedVolumeData)
-    .map(([date, volume]) => ({ date, volume }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 };
 
 export const calculateProgressiveOverload = (
   exerciseDetails: IWorkout[],
   duration: string
 ) => {
-  const startDate = setDuration(duration);
+  try {
+    const startDate = setDuration(duration);
 
-  const progressionDetails: OverloadProps = {};
+    const progressionDetails: OverloadProps = {};
 
-  for (const ex of exerciseDetails) {
-    const createdAt = new Date(ex.createdAt);
-    if (createdAt < startDate) continue;
+    for (const ex of exerciseDetails) {
+      const createdAt = new Date(ex.createdAt);
+      if (createdAt < startDate) continue;
 
-    const exDate = createdAt.toLocaleDateString("en-CA");
+      const exDate = createdAt.toLocaleDateString("en-CA");
 
-    const totalLoad = ex.sets.map((set) => {
-      if (!set.reps || !set.weight) return 0;
-      return set.reps * set.weight;
-    });
-    const highestLoad = Math.max(...totalLoad);
-    const highestSet = ex.sets.find(
-      (set) => (set.reps || 0) * (set.weight || 0) === highestLoad
-    );
+      const totalLoad = ex.sets.map((set) => {
+        if (!set.reps || !set.weight) return 0;
+        return set.reps * set.weight;
+      });
+      const highestLoad = Math.max(...totalLoad);
+      const highestSet = ex.sets.find(
+        (set) => (set.reps || 0) * (set.weight || 0) === highestLoad
+      );
 
-    progressionDetails[exDate] = {
-      reps: highestSet?.reps,
-      weight: highestSet?.weight,
-      load: highestLoad,
-    };
+      if (!highestSet || !highestSet.reps || !highestSet.weight) continue;
+
+      if (highestSet.reps < 1) continue;
+
+      progressionDetails[exDate] = {
+        reps: highestSet.reps,
+        weight: highestSet.weight,
+        load: highestLoad,
+      };
+    }
+
+    return Object.entries(progressionDetails)
+      .map(([date, data]) => ({
+        date,
+        load: data.load,
+        weight: data.weight,
+        reps: data.reps,
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  } catch (error) {
+    console.log("STRENGTH_FUNCTION_ERROR", error);
+    return [];
   }
-
-  return Object.entries(progressionDetails)
-    .map(([date, data]) => ({
-      date,
-      load: data.load,
-      weight: data.weight,
-      reps: data.reps,
-    }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 };
 
 export const calculateWorkoutDistribution = (
   exerciseDetails: PopulatedWorkout[],
   duration: string
 ) => {
-  const startDate = setDuration(duration);
-  const distributionDetails: Record<string, number> = {};
+  try {
+    const startDate = setDuration(duration);
+    const distributionDetails: Record<string, number> = {};
 
-  for (const ex of exerciseDetails) {
-    const createdAt = new Date(ex.createdAt);
-    if (createdAt < startDate) continue;
+    for (const ex of exerciseDetails) {
+      const createdAt = new Date(ex.createdAt);
+      if (createdAt < startDate) continue;
 
-    const muscleGroupName = ex.exerciseId.muscleGroup.muscleGroupName;
+      const muscleGroupName = ex.exerciseId.muscleGroup.muscleGroupName;
 
-    distributionDetails[muscleGroupName] =
-      (distributionDetails[muscleGroupName] || 0) + ex.sets.length;
+      const filteredSets = ex.sets.filter((s) => s.reps && s.reps > 0);
+
+      if (filteredSets.length < 1) continue;
+
+      distributionDetails[muscleGroupName] =
+        (distributionDetails[muscleGroupName] || 0) + filteredSets.length;
+    }
+
+    return Object.entries(distributionDetails).map(([muscle, volume]) => ({
+      muscle,
+      volume,
+    }));
+  } catch (error) {
+    console.log("DISTRIBUTION_FUNCTION_ERROR", error);
+    return [];
   }
-
-  return Object.entries(distributionDetails).map(([muscle, volume]) => ({
-    muscle,
-    volume,
-  }));
 };
 
 export const setDuration = (duration: string) => {

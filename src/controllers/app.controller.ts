@@ -309,6 +309,15 @@ export const createWorkout = async (req: Request, res: Response) => {
 export const editSet = async (req: Request, res: Response) => {
   try {
     const { workoutId, setId, reps, weight } = req.body;
+    const userId = req.userId;
+
+    if (!userId) {
+      res.json({
+        msg: "Invalid request",
+        success: false,
+      });
+      return;
+    }
 
     const workout = await Workout.findById(workoutId);
 
@@ -319,6 +328,10 @@ export const editSet = async (req: Request, res: Response) => {
       });
       return;
     }
+
+    let isRecordSet = false;
+
+    const recordSet = await getRecordSet(userId, workout.exerciseId.toString());
 
     const set = workout.sets.find((s) => s._id.toString() === setId);
 
@@ -335,9 +348,18 @@ export const editSet = async (req: Request, res: Response) => {
 
     await workout.save();
 
+    if (!recordSet) {
+      isRecordSet = true;
+    } else {
+      if (reps * weight > recordSet.reps * recordSet.weight) {
+        isRecordSet = true;
+      }
+    }
+
     res.json({
       msg: "Set updated",
       success: true,
+      isRecordSet,
     });
   } catch (error) {
     console.log("SET_EDIT_ERROR", error);
