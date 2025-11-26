@@ -97,11 +97,12 @@ export const calculateProgressiveOverload = (
 
       const totalLoad = ex.sets.map((set) => {
         if (!set.reps || !set.weight) return 0;
-        return set.reps * set.weight;
+        return calculateOneRepMax(set.reps, set.weight);
       });
       const highestLoad = Math.max(...totalLoad);
       const highestSet = ex.sets.find(
-        (set) => (set.reps || 0) * (set.weight || 0) === highestLoad
+        (set) =>
+          calculateOneRepMax(set.reps || 0, set.weight || 0) === highestLoad
       );
 
       if (!highestSet || !highestSet.reps || !highestSet.weight) continue;
@@ -185,28 +186,41 @@ export const getRecordSet = async (userId: string, exerciseId: string) => {
   }).populate("exerciseId", "name");
 
   const calculateHighestSet = (sets: Set[]) => {
-    const setArray = sets.map((s) => s.reps * s.weight);
+    const setArray = sets.map((s) => calculateOneRepMax(s.reps, s.weight));
     const highestSetData = Math.max(...setArray);
-    const highestSet = sets.find((s) => s.reps * s.weight === highestSetData);
+    const highestSet = sets.find(
+      (s) => calculateOneRepMax(s.reps, s.weight) === highestSetData
+    );
 
     if (!highestSet) {
-      return sets[0];
+      return {
+        recordSet: sets[0],
+        estimatedOneRepMax: sets[0]["weight"],
+      };
     }
-    return highestSet;
+    return {
+      recordSet: highestSet,
+      estimatedOneRepMax: highestSetData,
+    };
   };
 
   const setData = response.map((s) => {
     const sets = s.sets as Set[];
-    const highestSet = calculateHighestSet(sets);
+    const { recordSet, estimatedOneRepMax } = calculateHighestSet(sets);
     const createdAt = new Date(s.createdAt);
     return {
-      reps: highestSet.reps,
-      weight: highestSet.weight,
+      reps: recordSet.reps,
+      weight: recordSet.weight,
+      estimatedOneRepMax,
       createdAt,
     };
   });
 
-  const highestSet = calculateHighestSet(setData);
+  const recordSetDetails = calculateHighestSet(setData);
 
-  return highestSet;
+  return recordSetDetails;
+};
+
+export const calculateOneRepMax = (reps: number, weight: number) => {
+  return weight * (1 + reps / 30);
 };

@@ -251,7 +251,7 @@ export const createWorkout = async (req: Request, res: Response) => {
       return;
     }
 
-    const recordSet = await getRecordSet(userId, exerciseId);
+    const { recordSet } = await getRecordSet(userId, exerciseId);
 
     const set = { reps, weight };
 
@@ -331,7 +331,10 @@ export const editSet = async (req: Request, res: Response) => {
 
     let isRecordSet = false;
 
-    const recordSet = await getRecordSet(userId, workout.exerciseId.toString());
+    const { recordSet } = await getRecordSet(
+      userId,
+      workout.exerciseId.toString()
+    );
 
     const set = workout.sets.find((s) => s._id.toString() === setId);
 
@@ -601,7 +604,9 @@ export const getExerciseRecordSet = async (req: Request, res: Response) => {
     const userId = req.userId;
     const exerciseId = req.params.exerciseId;
 
-    const recordSet = await getRecordSet(userId, exerciseId);
+    const recordSetDetails = await getRecordSet(userId, exerciseId);
+
+    const { recordSet } = recordSetDetails;
 
     if (!recordSet) {
       res.json({
@@ -615,7 +620,7 @@ export const getExerciseRecordSet = async (req: Request, res: Response) => {
     res.json({
       msg: "Record set fetched",
       success: true,
-      set: recordSet,
+      recordSetDetails,
     });
   } catch (error) {
     console.log("RECORD_SET_ERROR", error);
