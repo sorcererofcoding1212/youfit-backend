@@ -180,10 +180,16 @@ export const setDuration = (duration: string) => {
 };
 
 export const getRecordSet = async (userId: string, exerciseId: string) => {
-  const response = await Workout.find({
+  const workouts = await Workout.find({
     userId,
     exerciseId,
   }).populate("exerciseId", "name");
+
+  if (workouts.length < 1)
+    return {
+      recordSet: null,
+      estimatedOneRepMax: 0,
+    };
 
   const calculateHighestSet = (sets: Set[]) => {
     const setArray = sets.map((s) => calculateOneRepMax(s.reps, s.weight));
@@ -204,7 +210,7 @@ export const getRecordSet = async (userId: string, exerciseId: string) => {
     };
   };
 
-  const setData = response.map((s) => {
+  const setData = workouts.map((s) => {
     const sets = s.sets as Set[];
     const { recordSet, estimatedOneRepMax } = calculateHighestSet(sets);
     const createdAt = new Date(s.createdAt);
