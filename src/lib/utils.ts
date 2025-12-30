@@ -34,8 +34,8 @@ export const generateToken = (phoneNumber: string, userId: string) => {
 export const setAuthCookie = (res: Response, cookieValue: string) => {
   return res.cookie("jwt_key", cookieValue, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "none",
+    secure: true,
+    sameSite: "lax",
   });
 };
 
