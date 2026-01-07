@@ -16,6 +16,21 @@ import {
 } from "../lib/utils";
 import { Routine } from "../models/routine.model";
 
+export const checkHealth = (_req: Request, res: Response) => {
+  try {
+    console.log("Timestamp : ", new Date().toISOString());
+    res.status(200).json({
+      msg: "ok",
+      success: true,
+    });
+  } catch (error) {
+    res.status(500).json({
+      msg: "Internal server error",
+      success: false,
+    });
+  }
+};
+
 export const createSession = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { validateSession } from "../middlewares/user.middleware";
 import {
+  checkHealth,
   createExercise,
   createRoutine,
   createSession,
@@ -23,6 +24,7 @@ import {
 
 const route = Router();
 
+route.get("/ping", checkHealth)
 route.post("/exercise", validateSession, createExercise);
 route.post("/session/:date", validateSession, createSession);
 route.get("/session/:date", validateSession, getSession);
